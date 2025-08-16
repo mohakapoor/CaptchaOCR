@@ -1,0 +1,147 @@
+```bash
+#!/usr/bin/env bash
+# Create a .gitignore that keeps the Dataset folder but ignores its contents,
+# plus common Python/ML ignores. Run this from your repo root.
+
+set -e
+
+cat > .gitignore << 'EOF'
+# Keep the Dataset folder but ignore its contents
+Dataset/
+!Dataset/.gitkeep
+!Dataset/**/
+Dataset/**/*
+
+Dataset_test/
+!Dataset_test/.gitkeep
+!Dataset_test/**/
+Dataset_test/**/*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+pip-wheel-metadata/
+wheels/
+.pytest_cache/
+.coverage
+#.coverage.*  # uncomment if you create multiple coverage files
+htmlcov/
+.cache/
+.mypy_cache/
+.pyre/
+.pytype/
+.dmypy.json
+.pyre_check/
+.ipynb_checkpoints/
+.site/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs and runtime
+*.log
+logs/
+*.pid
+*.seed
+*.out
+*.err
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# IDE/editor
+.vscode/
+.history/
+.idea/
+*.code-workspace
+
+# OS-specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Images/artifacts (remove if you plan to commit images outside Dataset)
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.tiff
+*.webp
+
+# Models and checkpoints
+checkpoints/
+*.ckpt
+*.onnx
+*.tflite
+*.pth
+*.pt
+*.bin
+*.safetensors
+runs/
+outputs/
+artifacts/
+
+# Data/cache
+data/
+datasets/
+.input/
+.output/
+.cache/
+tmp/
+temp/
+*.tar
+*.tar.gz
+*.zip
+*.7z
+
+# Config/private
+*.env
+.env.*
+secrets.*
+*.key
+*.pem
+
+# Node/JS (if present)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# Rust (if present)
+target/
+
+# C/C++ build (if present)
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+*.o
+*.obj
+*.exe
+*.dll
+*.lib
+*.a
+*.out
+
+# Java (if present)
+*.class
+.gradle/
+build/
+EOF
+
