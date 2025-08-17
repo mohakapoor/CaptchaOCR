@@ -141,10 +141,48 @@ python inference.py
 ## 🔬 Technical Details
 
 ### Model Architecture (CRNN)
-- **CNN Encoder**: SmallCNN with stride=4, reduces W=256→64 timesteps
-- **BiLSTM**: 2-layer bidirectional LSTM (320 hidden, dropout=0.05)
-- **LayerNorm**: Stabilizes training before output layer
-- **Linear Output**: Maps to 63 classes (62 chars + 1 blank token)
+
+The model uses a **CNN + RNN + CTC** architecture specifically designed for sequence recognition:
+
+#### **CNN Encoder (SmallCNN)**
+```
+Input: [B, 1, 60, 256] → Output: [64, B, 128]
+```
+- **Conv1 Block**: 3×3 conv → BatchNorm → ReLU → MaxPool(2×2)
+  - Channels: 1 → 64
+  - Spatial: 60×256 → 30×128
+- **Conv2 Block**: 3×3 conv → BatchNorm → ReLU → MaxPool(1×2)  
+  - Channels: 64 → 128
+  - Spatial: 30×128 → 30×64
+- **Residual Block**: 3×3 conv → BatchNorm → ReLU → 3×3 conv → BatchNorm + Skip Connection
+  - Maintains 128 channels and 30×64 spatial dimensions
+- **Height Pooling**: AdaptiveAvgPool2d(1, None) → squeeze(2)
+  - Spatial: 30×64 → 1×64 → 64 timesteps
+  - Final: [64, B, 128] where T=64, B=batch_size, C=128
+
+#### **RNN Decoder (BiLSTM)**
+```
+Input: [64, B, 128] → Output: [64, B, 640]
+```
+- **Architecture**: 2-layer bidirectional LSTM
+- **Hidden Size**: 320 per direction (total 640)
+- **Dropout**: 0.05 between layers
+- **Output**: [T, B, 2×hidden] = [64, B, 640]
+
+#### **Output Layer**
+```
+Input: [64, B, 640] → Output: [64, B, 63]
+```
+- **LayerNorm**: Stabilizes 640-dimensional features
+- **Linear**: Maps to vocabulary size (62 chars + 1 blank token)
+- **Final Shape**: [T=64, B=batch_size, V=63]
+
+#### **Key Design Features**
+- **Total Stride**: 4 (256 → 64 timesteps)
+- **Height Compression**: 60 → 1 (via pooling)
+- **Residual Connections**: Prevents gradient vanishing
+- **Bidirectional LSTM**: Captures context from both directions
+- **LayerNorm**: Training stability before final classification
 
 ### Training Optimizations
 - **AdamW Optimizer**: lr=3e-4, weight_decay=1e-4
