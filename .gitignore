@@ -1,12 +1,4 @@
-```bash
-#!/usr/bin/env bash
-# Create a .gitignore that keeps the Dataset folder but ignores its contents,
-# plus common Python/ML ignores. Run this from your repo root.
-
-set -e
-
-cat > .gitignore << 'EOF'
-# Keep the Dataset folder but ignore its contents
+# Keep Dataset folders but ignore their contents
 Dataset/
 !Dataset/.gitkeep
 !Dataset/**/
@@ -32,7 +24,6 @@ pip-wheel-metadata/
 wheels/
 .pytest_cache/
 .coverage
-#.coverage.*  # uncomment if you create multiple coverage files
 htmlcov/
 .cache/
 .mypy_cache/
@@ -75,7 +66,7 @@ logs/
 Thumbs.db
 desktop.ini
 
-# Images/artifacts (remove if you plan to commit images outside Dataset)
+# Images/artifacts
 *.png
 *.jpg
 *.jpeg
@@ -143,5 +134,4 @@ cmake-build-*/
 *.class
 .gradle/
 build/
-EOF
 

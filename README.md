@@ -13,18 +13,31 @@ This project implements an end-to-end CAPTCHA OCR system that can recognize text
 ## 🏗️ Current Status
 
 ### ✅ Completed Components
-- **Dataset Generation**: Synthetic CAPTCHA creation with train/val/test splits
+- **Dataset Generation**: Synthetic CAPTCHA creation with train/val/test splits (8k train, 1k val)
 - **Configuration**: Centralized config with image dimensions and training parameters
-- **Vocabulary System**: Character encoding/decoding with CTC blank token support
+- **Vocabulary System**: Character encoding/decoding with CTC blank token support (63 classes)
 - **CTC Collate Function**: Proper batching for variable-length sequences
 - **CTC Decoding**: Greedy decode for inference
+- **PyTorch Dataset Class**: Image loading and preprocessing with proper cv2 resizing
+- **CRNN Model**: CNN encoder + BiLSTM + LayerNorm + linear output (working!)
+- **Training Loop**: Complete epoch-based training pipeline with validation
+- **Metrics & Plotting**: Training/validation loss tracking with beautiful visualizations
+- **Debugging Tools**: Comprehensive logging of logits, predictions, and model health
 
-### 🔧 In Progress / Next Steps
-- **PyTorch Dataset Class**: Image loading and preprocessing
-- **CRNN Model**: CNN encoder + BiLSTM + linear output
-- **Training Loop**: Complete training pipeline with validation
-- **Metrics**: CER (Character Error Rate) and exact match accuracy
-- **Inference Pipeline**: Model loading and prediction
+### ✅ What's Working
+- **Training Pipeline**: Stable training loop with proper loss convergence
+- **Model Architecture**: CRNN produces correct output shapes (56×batch×63)
+- **Data Loading**: Proper image preprocessing and CTC batching
+- **Early Learning**: Model outputs first characters after 3 epochs (blank prob: 1.0→0.975)
+
+### ❌ What's Not Working Yet
+- **Accuracy**: Still very low, mostly single characters (`'t', 'tu'`)
+- **Sequence Length**: Not yet producing full CAPTCHA sequences
+- **Character Diversity**: Limited to a few characters, needs more training
+
+### 🎯 Training Status
+- **Current**: Epoch 3, basic character recognition starting
+- **Estimated**: 20-40 epochs needed for decent CAPTCHA accuracy
 
 ## 📁 Project Structure
 
@@ -38,10 +51,14 @@ CaptchaDetect/
 │       └── test/           # 10% of data
 ├── src/
 │   ├── config.py           # Configuration and hyperparameters
-│   ├── vocab.py            # Character vocabulary and CTC encoding
+│   ├── vocab.py            # Character vocabulary and CTC encoding/decoding
 │   ├── data.py             # Dataset generation script
 │   ├── collate.py          # CTC batching function
-│   └── [model files]       # Coming soon...
+│   ├── captcha_dataset.py  # PyTorch Dataset class
+│   ├── model_crnn.py       # CRNN model architecture
+│   └── plotting.py         # Training metrics and visualization
+├── train.py                # Main training script (✅ WORKING!)
+├── Metrics/                # Training plots and logs (auto-generated)
 ├── .gitignore              # Ignores dataset contents, keeps structure
 └── README.md               # This file
 ```
@@ -57,18 +74,24 @@ pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu12
 pip install captcha pandas pillow
 ```
 
-### 2. Generate Test Dataset
+### 2. Generate Training Dataset
 ```bash
 cd src
 python data.py
 ```
-This creates 1,000 synthetic CAPTCHAs in `Dataset_test/captchas/` with proper train/val/test splits.
+This creates 10,000 synthetic CAPTCHAs in `Dataset_test/captchas/` with proper train/val/test splits.
 
-### 3. Configuration
-Edit `src/config.py` to adjust:
-- Image dimensions (H=48, W_max=224)
-- Batch sizes (32 for local GTX 1650, 128 for Colab T4)
-- Training parameters
+### 3. Start Training
+```bash
+python train.py
+```
+This starts the full training pipeline with automatic metrics generation.
+
+### 4. Monitor Progress
+Training will show:
+- Real-time loss and prediction samples
+- Automatic plot generation in `Metrics/` folder
+- Comprehensive training logs and summaries
 
 ## 🎮 Usage
 
@@ -84,21 +107,29 @@ Edit `src/config.py` to adjust:
 
 ## 🔬 Technical Details
 
-### Model Architecture
-- **CNN Encoder**: Reduces image to sequence representation
-- **BiLSTM**: Processes sequential features
-- **Linear Output**: Maps to vocabulary size (including blank token)
+### Model Architecture (CRNN)
+- **CNN Encoder**: SmallCNN with stride=4, reduces W=224→56 timesteps
+- **BiLSTM**: 2-layer bidirectional LSTM (256 hidden, dropout=0.1)
+- **LayerNorm**: Stabilizes training before output layer
+- **Linear Output**: Maps to 63 classes (62 chars + 1 blank token)
+
+### Training Optimizations
+- **AdamW Optimizer**: lr=3e-4, weight_decay=1e-4
+- **Gradient Clipping**: max_norm=1.0 prevents exploding gradients
+- **Weight Initialization**: Small uniform weights (-1e-3, 1e-3) for stability
+- **Numeric Stability**: AMP disabled during initial training for stability
 
 ### CTC Training
-- **Input**: Images resized to 48×224
+- **Input**: Images resized to 48×224 (height×width)
 - **Output**: Character sequences (a-z, A-Z, 0-9)
-- **Loss**: CTCLoss with blank=0
-- **Decoding**: Greedy CTC decode
+- **Loss**: CTCLoss with blank=0, zero_infinity=True
+- **Decoding**: Greedy CTC decode with duplicate removal
 
-### Data Format
-- **Images**: Grayscale, normalized tensors
+### Data Pipeline
+- **Images**: Grayscale, normalized to [0,1], proper cv2 resizing
 - **Labels**: CSV with filename and text label
-- **Batching**: Variable-length sequences handled by custom collate
+- **Batching**: Variable-length sequences with custom CTC collate function
+- **Debugging**: Real-time monitoring of logits, blank probability, predictions
 
 ## 📊 Performance Expectations
 

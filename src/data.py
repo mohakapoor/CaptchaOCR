@@ -8,11 +8,11 @@ import pandas as pd
 # config
 DATASET_DIR = "Dataset_test/captchas"
 LABELS = "Dataset_test/labels.csv"
-NUM_IMAGES = 1000
+NUM_IMAGES = 10000
 CHARS = string.ascii_letters + string.digits
 CAPTCHA_LEN_LOWER_LIMIT = 5
 CAPTCHA_LEN_UPPER_LIMIT = 7
-directories = [["train",0.8],["test",0.1],["val",0.1]]
+directories = [["train",0.8],["val",0.1],["test",0.1]]
 
 os.makedirs(DATASET_DIR, exist_ok=True)
 image = ImageCaptcha(width=160, height=60)
