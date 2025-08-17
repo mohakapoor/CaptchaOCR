@@ -128,16 +128,6 @@ python inference.py
 - **Shows both overall and character accuracy**
 - **Creates visualization plots** in Metrics folder
 
-### Local Development (GTX 1650)
-- Use `Dataset_test` (1k images)
-- Batch size: 32
-- Good for rapid iteration and testing
-
-### Colab Training (Tesla T4)
-- Use `Dataset` (100k images)
-- Batch size: 128
-- Expected training time: 2-4 hours for 40 epochs
-
 ## 🔬 Technical Details
 
 ### Model Architecture (CRNN)
@@ -149,41 +139,46 @@ graph TD
     %% Input Layer
     A[Input Image<br/>60x256x1] --> B[CNN Encoder<br/>SmallCNN]
     
-    %% CNN Encoder Details
-    B --> C[Conv1 Block<br/>3x3 Conv + BatchNorm + ReLU<br/>MaxPool 2x2]
-    C --> D[Channels: 1 to 64<br/>Spatial: 60x256 to 30x128]
+    %% CNN Subgraph - Top to Bottom
+    subgraph CNN ["CNN Encoder Layer"]
+        B --> C[Conv1 Block<br/>3x3 Conv + BatchNorm + ReLU<br/>MaxPool 2x2]
+        C --> D[Channels: 1 to 64<br/>Spatial: 60x256 to 30x128]
+        
+        D --> E[Conv2 Block<br/>3x3 Conv + BatchNorm + ReLU<br/>MaxPool 1x2]
+        E --> F[Channels: 64 to 128<br/>Spatial: 30x128 to 30x64]
+        
+        F --> G[Residual Block<br/>3x3 Conv + BatchNorm + ReLU<br/>3x3 Conv + BatchNorm<br/>+ Skip Connection]
+        G --> H[Maintains: 128 channels, 30x64 spatial]
+        
+        H --> I[Height Pooling<br/>AdaptiveAvgPool2d 1xNone]
+        I --> J[Squeeze Height<br/>30x64 to 1x64]
+        
+        J --> K[Permute & Reshape<br/>B,128,1,64 to 64,B,128]
+    end
     
-    D --> E[Conv2 Block<br/>3x3 Conv + BatchNorm + ReLU<br/>MaxPool 1x2]
-    E --> F[Channels: 64 to 128<br/>Spatial: 30x128 to 30x64]
+    %% RNN Subgraph - Top to Bottom
+    subgraph RNN ["RNN Decoder Layer"]
+        K --> L[RNN Decoder<br/>2-Layer BiLSTM]
+        L --> M[Hidden Size: 320 per direction<br/>Total: 640 features]
+        M --> N[Output: 64,B,640]
+    end
     
-    F --> G[Residual Block<br/>3x3 Conv + BatchNorm + ReLU<br/>3x3 Conv + BatchNorm<br/>+ Skip Connection]
-    G --> H[Maintains: 128 channels, 30x64 spatial]
+    %% Output Subgraph - Top to Bottom
+    subgraph OUTPUT ["Output & CTC Layer"]
+        N --> O[LayerNorm<br/>Stabilize 640D features]
+        O --> P[Linear Layer<br/>640 to 63 classes]
+        P --> Q[Output Logits<br/>64,B,63]
+        
+        Q --> R[CTC Decoding<br/>Remove duplicates & blanks]
+        R --> S[Final Prediction<br/>Character sequence]
+    end
     
-    H --> I[Height Pooling<br/>AdaptiveAvgPool2d 1xNone]
-    I --> J[Squeeze Height<br/>30x64 to 1x64]
-    
-    J --> K[Permute & Reshape<br/>B,128,1,64 to 64,B,128]
-    
-    %% RNN Decoder
-    K --> L[RNN Decoder<br/>2-Layer BiLSTM]
-    L --> M[Hidden Size: 320 per direction<br/>Total: 640 features]
-    M --> N[Output: 64,B,640]
-    
-    %% Output Layer
-    N --> O[LayerNorm<br/>Stabilize 640D features]
-    O --> P[Linear Layer<br/>640 to 63 classes]
-    P --> Q[Output Logits<br/>64,B,63]
-    
-    %% CTC Processing
-    Q --> R[CTC Decoding<br/>Remove duplicates & blanks]
-    R --> S[Final Prediction<br/>Character sequence]
-    
-    %% Styling
-    classDef inputLayer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef cnnLayer fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef rnnLayer fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef outputLayer fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef ctcLayer fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    %% Styling - Darker colors with black text
+    classDef inputLayer fill:#ffcc80,stroke:#e65100,stroke-width:3px,color:#000000
+    classDef cnnLayer fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px,color:#000000
+    classDef rnnLayer fill:#bbdefb,stroke:#1565c0,stroke-width:3px,color:#000000
+    classDef outputLayer fill:#f8bbd9,stroke:#ad1457,stroke-width:3px,color:#000000
+    classDef ctcLayer fill:#d1c4e9,stroke:#512da8,stroke-width:3px,color:#000000
     
     class A inputLayer
     class B,C,D,E,F,G,H,I,J,K cnnLayer
@@ -192,45 +187,6 @@ graph TD
     class R,S ctcLayer
 ```
 
-**Data Flow Summary:**
-- **Input**: `[B, 1, 60, 256]` - Batch of grayscale images
-- **CNN Output**: `[64, B, 128]` - 64 timesteps, batch size, 128 features
-- **RNN Output**: `[64, B, 640]` - 64 timesteps, batch size, 640 features  
-- **Final Output**: `[64, B, 63]` - 64 timesteps, batch size, 63 classes
-- **CTC Decode**: Character sequence (a-z, A-Z, 0-9)
-
-#### **CNN Encoder (SmallCNN)**
-```
-Input: [B, 1, 60, 256] → Output: [64, B, 128]
-```
-- **Conv1 Block**: 3×3 conv → BatchNorm → ReLU → MaxPool(2×2)
-  - Channels: 1 → 64
-  - Spatial: 60×256 → 30×128
-- **Conv2 Block**: 3×3 conv → BatchNorm → ReLU → MaxPool(1×2)  
-  - Channels: 64 → 128
-  - Spatial: 30×128 → 30×64
-- **Residual Block**: 3×3 conv → BatchNorm → ReLU → 3×3 conv → BatchNorm + Skip Connection
-  - Maintains 128 channels and 30×64 spatial dimensions
-- **Height Pooling**: AdaptiveAvgPool2d(1, None) → squeeze(2)
-  - Spatial: 30×64 → 1×64 → 64 timesteps
-  - Final: [64, B, 128] where T=64, B=batch_size, C=128
-
-#### **RNN Decoder (BiLSTM)**
-```
-Input: [64, B, 128] → Output: [64, B, 640]
-```
-- **Architecture**: 2-layer bidirectional LSTM
-- **Hidden Size**: 320 per direction (total 640)
-- **Dropout**: 0.05 between layers
-- **Output**: [T, B, 2×hidden] = [64, B, 640]
-
-#### **Output Layer**
-```
-Input: [64, B, 640] → Output: [64, B, 63]
-```
-- **LayerNorm**: Stabilizes 640-dimensional features
-- **Linear**: Maps to vocabulary size (62 chars + 1 blank token)
-- **Final Shape**: [T=64, B=batch_size, V=63]
 
 #### **Key Design Features**
 - **Total Stride**: 4 (256 → 64 timesteps)
