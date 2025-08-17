@@ -48,7 +48,7 @@ This project implements an end-to-end CAPTCHA OCR system that can recognize text
 - **Stable training**: Val/Train ratio stays healthy throughout training
 
 ### 🔍 Inference Results
-![Inference Results](Metrics/inference_results.png)
+![Inference Results](Metrics/inference_results_readme.png)
 
 **Model Performance:**
 - **Visual predictions**: Shows actual CAPTCHA images with predicted text
