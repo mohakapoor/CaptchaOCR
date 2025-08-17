@@ -147,8 +147,8 @@ def main():
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
-            print(f"  🎯 New best validation loss: {best_val_loss:.4f}")
-            print(f"  📊 Val/Train ratio: {val_train_ratio:.3f}")
+            print(f"  New best validation loss: {best_val_loss:.4f}")
+            print(f"  Val/Train ratio: {val_train_ratio:.3f}")
             
             # Save best model checkpoint with metadata
             checkpoint = {
@@ -169,19 +169,19 @@ def main():
                 }
             }
             torch.save(checkpoint, "checkpoints/best_model.pth")
-            print(f"  💾 Best model saved to checkpoints/best_model.pth")
+            print(f"  Best model saved to checkpoints/best_model.pth")
             
         else:
             patience_counter += 1
-            print(f"  ⚠️  No improvement for {patience_counter} epochs")
-            print(f"  📊 Val/Train ratio: {val_train_ratio:.3f}")
+            print(f"  No improvement for {patience_counter} epochs")
+            print(f"  Val/Train ratio: {val_train_ratio:.3f}")
             
         # Enhanced early stopping: Check both absolute loss and ratio
         if patience_counter >= patience or val_train_ratio > 3.0:  # Stop if ratio > 3x
             if val_train_ratio > 3.0:
-                print(f"  🛑 Early stopping triggered! Val/Train ratio too high: {val_train_ratio:.3f}")
+                print(f"  Early stopping triggered! Val/Train ratio too high: {val_train_ratio:.3f}")
             else:
-                print(f"  🛑 Early stopping triggered! No improvement for {patience} epochs")
+                print(f" Early stopping triggered! No improvement for {patience} epochs")
             early_stop = True
             break
 
@@ -253,7 +253,7 @@ def main():
         }
     }
     torch.save(final_checkpoint, "checkpoints/final_model.pth")
-    print(f"💾 Final model saved to checkpoints/final_model.pth")
+    print(f"Final model saved to checkpoints/final_model.pth")
     
     print("\nGenerating training metrics and plots...")
     os.makedirs("Metrics", exist_ok=True)

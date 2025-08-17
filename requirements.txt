@@ -1,0 +1,17 @@
+# CAPTCHA OCR Project Dependencies
+# Core ML Framework (install separately with CUDA 12.8 support)
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+
+# Computer Vision
+opencv-python>=4.8.0
+Pillow>=9.0.0
+
+# CAPTCHA Generation
+captcha>=0.4.0
+
+# Data Processing
+numpy>=1.21.0
+pandas>=1.3.0
+
+# Visualization and Plotting
+matplotlib>=3.5.0

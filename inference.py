@@ -19,7 +19,7 @@ def load_model(checkpoint_path="checkpoints/best_model.pth"):
     
     # Load checkpoint to the detected device
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    print(f"✅ Loaded model from epoch {checkpoint['epoch']}")
+    print(f"Loaded model from epoch {checkpoint['epoch']}")
     print(f"   Best validation loss: {checkpoint['best_val_loss']:.4f}")
     print(f"   Loading to device: {device}")
     
@@ -74,25 +74,25 @@ def generate_test_captcha(text, filename, width=160, height=60):
     image = ImageCaptcha(width=width, height=height)
     filepath = os.path.join(cfg.RESULT_DIR, filename)
     image.write(text, filepath)
-    print(f"📸 Generated test CAPTCHA: {filename}")
+    print(f"Generated test CAPTCHA: {filename}")
     return filepath
 
 def main():
     # Setup
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"🚀 Using device: {device}")
+    print(f"Using device: {device}")
     
     os.makedirs(cfg.RESULT_DIR, exist_ok=True)
     
     try:
         # Load trained model
-        print("📥 Loading trained model...")
+        print("Loading trained model...")
         model = load_model()
         model = model.to(device)
-        print("✅ Model loaded successfully!")
+        print("Model loaded successfully!")
         
         # Generate test CAPTCHAs
-        print("\n🎯 Generating test CAPTCHAs...")
+        print("\nGenerating test CAPTCHAs...")
         test_cases = []
         
         for i in range(4):
@@ -105,7 +105,7 @@ def main():
             test_cases.append((text, image_path, ""))  # Add empty prediction slot
         
         # Run inference
-        print("\n🔍 Running inference...")
+        print("\nRunning inference...")
         print("-" * 60)
         print(f"{'Target':<15} {'Prediction':<15} {'Correct':<10} {'Image':<20}")
         print("-" * 60)
@@ -128,16 +128,16 @@ def main():
                     correct_count += 1
                 
                 # Display result
-                status = "✅" if is_correct else "❌"
+                status = "CORRECT" if is_correct else "WRONG"
                 print(f"{target_text:<15} {prediction:<15} {status:<10} {os.path.basename(image_path):<20}")
                 
             except Exception as e:
-                print(f"❌ Error processing {image_path}: {e}")
+                print(f"Error processing {image_path}: {e}")
         
         # Summary
         print("-" * 60)
         accuracy = (correct_count / len(test_cases)) * 100
-        print(f"📊 Overall Accuracy: {correct_count}/{len(test_cases)} ({accuracy:.1f}%)")
+        print(f"Overall Accuracy: {correct_count}/{len(test_cases)} ({accuracy:.1f}%)")
         
         # Calculate individual character accuracy
         total_chars = 0
@@ -154,14 +154,14 @@ def main():
         print(f"🔤 Character Accuracy: {correct_chars}/{total_chars} ({char_accuracy:.1f}%)")
         
         if accuracy >= 80:
-            print("🎉 Excellent performance!")
+            print("Excellent performance!")
         elif accuracy >= 60:
-            print("👍 Good performance!")
+            print("Good performance!")
         else:
-            print("🤔 Room for improvement...")
+            print("Room for improvement...")
         
         # Create and save results plot
-        print("\n📊 Generating results visualization...")
+        print("\nGenerating results visualization...")
         try:
             metrics = TrainingMetrics()
             image_paths = [case[1] for case in test_cases]
@@ -173,14 +173,14 @@ def main():
             
             # Plot results
             metrics.plot_results(image_paths, predictions, targets)
-            print("✅ Results plot generated successfully!")
+            print("Results plot generated successfully!")
             
         except Exception as e:
-            print(f"⚠️  Warning: Could not generate plot: {e}")
+            print(f"Warning: Could not generate plot: {e}")
             
     except Exception as e:
-        print(f"❌ Error: {e}")
-        print("💡 Make sure you have a trained model in checkpoints/best_model.pth")
+        print(f"Error: {e}")
+        print("Make sure you have a trained model in checkpoints/best_model.pth")
 
 if __name__ == "__main__":
     main()
