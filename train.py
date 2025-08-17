@@ -57,6 +57,12 @@ def main():
     print(f"\nStarting training for {epochs} epochs...")
     
     metrics = TrainingMetrics()
+    
+    # Early stopping setup
+    best_val_loss = float('inf')
+    patience = 5  # Stop if no improvement for 5 epochs
+    patience_counter = 0
+    early_stop = False
 
     for epoch in range(epochs):
         # Training phase
@@ -134,6 +140,50 @@ def main():
         print(f"  Train Loss: {avg_train_loss:.4f}")
         print(f"  Val Loss: {avg_val_loss:.4f}")
         metrics.add_epoch(epoch+1, avg_train_loss, avg_val_loss)
+        
+        # Enhanced early stopping check
+        val_train_ratio = avg_val_loss / (avg_train_loss + 1e-8)  # Avoid division by zero
+        
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            patience_counter = 0
+            print(f"  🎯 New best validation loss: {best_val_loss:.4f}")
+            print(f"  📊 Val/Train ratio: {val_train_ratio:.3f}")
+            
+            # Save best model checkpoint with metadata
+            checkpoint = {
+                'epoch': epoch + 1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'best_val_loss': best_val_loss,
+                'train_loss': avg_train_loss,
+                'val_loss': avg_val_loss,
+                'val_train_ratio': val_train_ratio,
+                'config': {
+                    'vocab_size': vocab_size(),
+                    'hidden_size': 320,
+                    'total_stride': cfg.total_stride,
+                    'H': cfg.H,
+                    'W_max': cfg.W_max
+                }
+            }
+            torch.save(checkpoint, "checkpoints/best_model.pth")
+            print(f"  💾 Best model saved to checkpoints/best_model.pth")
+            
+        else:
+            patience_counter += 1
+            print(f"  ⚠️  No improvement for {patience_counter} epochs")
+            print(f"  📊 Val/Train ratio: {val_train_ratio:.3f}")
+            
+        # Enhanced early stopping: Check both absolute loss and ratio
+        if patience_counter >= patience or val_train_ratio > 3.0:  # Stop if ratio > 3x
+            if val_train_ratio > 3.0:
+                print(f"  🛑 Early stopping triggered! Val/Train ratio too high: {val_train_ratio:.3f}")
+            else:
+                print(f"  🛑 Early stopping triggered! No improvement for {patience} epochs")
+            early_stop = True
+            break
 
         # Test some predictions
         if epoch % 2 == 0:  # Every 2 epochs
@@ -181,7 +231,30 @@ def main():
                 
                 metrics.add_predictions(test_preds, test_targets)
 
-    print("\nTraining complete!")
+    if early_stop:
+        print(f"\nTraining stopped early at epoch {epoch+1} due to no improvement!")
+    else:
+        print(f"\nTraining completed for all {epochs} epochs!")
+    
+    # Save final model
+    final_checkpoint = {
+        'epoch': epoch + 1,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict(),
+        'final_val_loss': avg_val_loss,
+        'final_train_loss': avg_train_loss,
+        'config': {
+            'vocab_size': vocab_size(),
+            'hidden_size': 320,
+            'total_stride': cfg.total_stride,
+            'H': cfg.H,
+            'W_max': cfg.W_max
+        }
+    }
+    torch.save(final_checkpoint, "checkpoints/final_model.pth")
+    print(f"💾 Final model saved to checkpoints/final_model.pth")
+    
     print("\nGenerating training metrics and plots...")
     os.makedirs("Metrics", exist_ok=True)
     metrics.plot_losses()

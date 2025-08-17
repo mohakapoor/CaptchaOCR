@@ -36,8 +36,18 @@ This project implements an end-to-end CAPTCHA OCR system that can recognize text
 - **Character Diversity**: Limited to a few characters, needs more training
 
 ### 🎯 Training Status
-- **Current**: Epoch 3, basic character recognition starting
-- **Estimated**: 20-40 epochs needed for decent CAPTCHA accuracy
+- **Current**: Epoch 8, excellent convergence achieved
+- **Best Model**: Validation loss 0.1782, early stopping working perfectly
+- **Performance**: 75-100% accuracy on fresh CAPTCHAs (varies by run)
+
+### 📊 Training Results
+![Training Losses](Metrics/training_losses.png)
+![Loss Comparison](Metrics/loss_comparison.png)
+
+**Key Insights:**
+- **Rapid convergence**: Loss dropped from 21→0.1 in first 7 epochs
+- **No overfitting**: Enhanced early stopping prevents overfitting
+- **Stable training**: Val/Train ratio stays healthy throughout training
 
 ## 📁 Project Structure
 

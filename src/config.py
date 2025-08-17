@@ -7,7 +7,10 @@ class Config:
     data_root: str = os.getenv("DATA_ROOT","Dataset_test\captchas")
 
     chars: str = string.ascii_letters + string.digits
-    
+    CAPTCHA_LEN_LOWER_LIMIT: int = 5
+    CAPTCHA_LEN_UPPER_LIMIT: int = 7
+
+    RESULT_DIR: str = "Results"
     # Image dimensions - increased for better character detail
     H: int = 60  # Increased from 48 for more vertical detail
     W_max: int = 256  # Increased from 224 for more time steps (T=64)
