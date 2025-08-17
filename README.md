@@ -25,15 +25,17 @@ This project implements an end-to-end CAPTCHA OCR system that can recognize text
 - **Debugging Tools**: Comprehensive logging of logits, predictions, and model health
 
 ### ✅ What's Working
-- **Training Pipeline**: Stable training loop with proper loss convergence
-- **Model Architecture**: CRNN produces correct output shapes (56×batch×63)
+- **Training Pipeline**: Stable training loop with excellent loss convergence
+- **Model Architecture**: CRNN produces correct output shapes (64×batch×63) with H=60, W=256
 - **Data Loading**: Proper image preprocessing and CTC batching
-- **Early Learning**: Model outputs first characters after 3 epochs (blank prob: 1.0→0.975)
+- **Full CAPTCHA Recognition**: Model now recognizes complete CAPTCHA sequences
+- **Inference Pipeline**: Complete inference script with visualization and accuracy metrics
+- **Early Stopping**: Enhanced early stopping prevents overfitting automatically
 
 ### ❌ What's Not Working Yet
-- **Accuracy**: Still very low, mostly single characters (`'t', 'tu'`)
-- **Sequence Length**: Not yet producing full CAPTCHA sequences
-- **Character Diversity**: Limited to a few characters, needs more training
+- **Consistent Accuracy**: Performance varies between 75-100% on different runs
+- **Character Confusion**: Some similar characters still get mixed up (e.g., 'l' vs 'I')
+- **Real-world Robustness**: Only tested on synthetic CAPTCHAs so far
 
 ### 🎯 Training Status
 - **Current**: Epoch 8, excellent convergence achieved
@@ -105,9 +107,26 @@ Training will show:
 
 ## 🎮 Usage
 
+### Training
+```bash
+python train.py
+```
+- **Automatic early stopping** prevents overfitting
+- **Real-time metrics** and sample predictions
+- **Checkpoint saving** for best model
+
+### Inference
+```bash
+python inference.py
+```
+- **Loads best trained model** automatically
+- **Generates test CAPTCHAs** for evaluation
+- **Shows both overall and character accuracy**
+- **Creates visualization plots** in Metrics folder
+
 ### Local Development (GTX 1650)
 - Use `Dataset_test` (1k images)
-- Batch size: 32-48
+- Batch size: 32
 - Good for rapid iteration and testing
 
 ### Colab Training (Tesla T4)
@@ -118,8 +137,8 @@ Training will show:
 ## 🔬 Technical Details
 
 ### Model Architecture (CRNN)
-- **CNN Encoder**: SmallCNN with stride=4, reduces W=224→56 timesteps
-- **BiLSTM**: 2-layer bidirectional LSTM (256 hidden, dropout=0.1)
+- **CNN Encoder**: SmallCNN with stride=4, reduces W=256→64 timesteps
+- **BiLSTM**: 2-layer bidirectional LSTM (320 hidden, dropout=0.05)
 - **LayerNorm**: Stabilizes training before output layer
 - **Linear Output**: Maps to 63 classes (62 chars + 1 blank token)
 
@@ -130,7 +149,7 @@ Training will show:
 - **Numeric Stability**: AMP disabled during initial training for stability
 
 ### CTC Training
-- **Input**: Images resized to 48×224 (height×width)
+- **Input**: Images resized to 60×256 (height×width)
 - **Output**: Character sequences (a-z, A-Z, 0-9)
 - **Loss**: CTCLoss with blank=0, zero_infinity=True
 - **Decoding**: Greedy CTC decode with duplicate removal
@@ -145,8 +164,8 @@ Training will show:
 
 ### GTX 1650 (4GB VRAM)
 - Training time: 3-8 hours for 100k×40 epochs
-- Batch size: 32-48
-- Memory efficient with H=48
+- Batch size: 32
+- Memory efficient with H=60, W=256
 
 ### Tesla T4 (16GB VRAM)
 - Training time: 2-4 hours for 100k×40 epochs
