@@ -144,6 +144,61 @@ python inference.py
 
 The model uses a **CNN + RNN + CTC** architecture specifically designed for sequence recognition:
 
+```mermaid
+graph TD
+    %% Input Layer
+    A[Input Image<br/>60×256×1] --> B[CNN Encoder<br/>SmallCNN]
+    
+    %% CNN Encoder Details
+    B --> C[Conv1 Block<br/>3×3 Conv + BatchNorm + ReLU<br/>MaxPool 2×2]
+    C --> D[Channels: 1→64<br/>Spatial: 60×256→30×128]
+    
+    D --> E[Conv2 Block<br/>3×3 Conv + BatchNorm + ReLU<br/>MaxPool 1×2]
+    E --> F[Channels: 64→128<br/>Spatial: 30×128→30×64]
+    
+    F --> G[Residual Block<br/>3×3 Conv + BatchNorm + ReLU<br/>3×3 Conv + BatchNorm<br/>+ Skip Connection]
+    G --> H[Maintains: 128 channels, 30×64 spatial]
+    
+    H --> I[Height Pooling<br/>AdaptiveAvgPool2d 1×None]
+    I --> J[Squeeze Height<br/>30×64→1×64]
+    
+    J --> K[Permute & Reshape<br/>[B,128,1,64]→[64,B,128]]
+    
+    %% RNN Decoder
+    K --> L[RNN Decoder<br/>2-Layer BiLSTM]
+    L --> M[Hidden Size: 320 per direction<br/>Total: 640 features]
+    M --> N[Output: [64,B,640]]
+    
+    %% Output Layer
+    N --> O[LayerNorm<br/>Stabilize 640D features]
+    O --> P[Linear Layer<br/>640→63 classes]
+    P --> Q[Output Logits<br/>[64,B,63]]
+    
+    %% CTC Processing
+    Q --> R[CTC Decoding<br/>Remove duplicates & blanks]
+    R --> S[Final Prediction<br/>Character sequence]
+    
+    %% Styling
+    classDef inputLayer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef cnnLayer fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef rnnLayer fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef outputLayer fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef ctcLayer fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    
+    class A inputLayer
+    class B,C,D,E,F,G,H,I,J,K cnnLayer
+    class L,M,N rnnLayer
+    class O,P,Q outputLayer
+    class R,S ctcLayer
+```
+
+**Data Flow Summary:**
+- **Input**: `[B, 1, 60, 256]` - Batch of grayscale images
+- **CNN Output**: `[64, B, 128]` - 64 timesteps, batch size, 128 features
+- **RNN Output**: `[64, B, 640]` - 64 timesteps, batch size, 640 features  
+- **Final Output**: `[64, B, 63]` - 64 timesteps, batch size, 63 classes
+- **CTC Decode**: Character sequence (a-z, A-Z, 0-9)
+
 #### **CNN Encoder (SmallCNN)**
 ```
 Input: [B, 1, 60, 256] → Output: [64, B, 128]
