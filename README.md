@@ -147,32 +147,32 @@ The model uses a **CNN + RNN + CTC** architecture specifically designed for sequ
 ```mermaid
 graph TD
     %% Input Layer
-    A[Input Image<br/>60×256×1] --> B[CNN Encoder<br/>SmallCNN]
+    A[Input Image<br/>60x256x1] --> B[CNN Encoder<br/>SmallCNN]
     
     %% CNN Encoder Details
-    B --> C[Conv1 Block<br/>3×3 Conv + BatchNorm + ReLU<br/>MaxPool 2×2]
-    C --> D[Channels: 1→64<br/>Spatial: 60×256→30×128]
+    B --> C[Conv1 Block<br/>3x3 Conv + BatchNorm + ReLU<br/>MaxPool 2x2]
+    C --> D[Channels: 1 to 64<br/>Spatial: 60x256 to 30x128]
     
-    D --> E[Conv2 Block<br/>3×3 Conv + BatchNorm + ReLU<br/>MaxPool 1×2]
-    E --> F[Channels: 64→128<br/>Spatial: 30×128→30×64]
+    D --> E[Conv2 Block<br/>3x3 Conv + BatchNorm + ReLU<br/>MaxPool 1x2]
+    E --> F[Channels: 64 to 128<br/>Spatial: 30x128 to 30x64]
     
-    F --> G[Residual Block<br/>3×3 Conv + BatchNorm + ReLU<br/>3×3 Conv + BatchNorm<br/>+ Skip Connection]
-    G --> H[Maintains: 128 channels, 30×64 spatial]
+    F --> G[Residual Block<br/>3x3 Conv + BatchNorm + ReLU<br/>3x3 Conv + BatchNorm<br/>+ Skip Connection]
+    G --> H[Maintains: 128 channels, 30x64 spatial]
     
-    H --> I[Height Pooling<br/>AdaptiveAvgPool2d 1×None]
-    I --> J[Squeeze Height<br/>30×64→1×64]
+    H --> I[Height Pooling<br/>AdaptiveAvgPool2d 1xNone]
+    I --> J[Squeeze Height<br/>30x64 to 1x64]
     
-    J --> K[Permute & Reshape<br/>[B,128,1,64]→[64,B,128]]
+    J --> K[Permute & Reshape<br/>B,128,1,64 to 64,B,128]
     
     %% RNN Decoder
     K --> L[RNN Decoder<br/>2-Layer BiLSTM]
     L --> M[Hidden Size: 320 per direction<br/>Total: 640 features]
-    M --> N[Output: [64,B,640]]
+    M --> N[Output: 64,B,640]
     
     %% Output Layer
     N --> O[LayerNorm<br/>Stabilize 640D features]
-    O --> P[Linear Layer<br/>640→63 classes]
-    P --> Q[Output Logits<br/>[64,B,63]]
+    O --> P[Linear Layer<br/>640 to 63 classes]
+    P --> Q[Output Logits<br/>64,B,63]
     
     %% CTC Processing
     Q --> R[CTC Decoding<br/>Remove duplicates & blanks]
