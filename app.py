@@ -20,6 +20,24 @@ def random_text():
     L = random.randint(cfg.CAPTCHA_LEN_LOWER_LIMIT, cfg.CAPTCHA_LEN_UPPER_LIMIT)
     return "".join(random.choices(cfg.chars, k=L))
 
+def calculate_accuracy(prediction, target):
+    """Calculate character-by-character accuracy."""
+    if not prediction or not target:
+        return "0%"
+    
+    correct_chars = 0
+    min_len = min(len(prediction), len(target))
+    
+    for i in range(min_len):
+        if prediction[i] == target[i]:
+            correct_chars += 1
+    
+    if min_len == 0:
+        return "0%"
+    
+    accuracy = (correct_chars / min_len) * 100
+    return f"{accuracy:.1f}%"
+
 def ui_generate():
     text = random_text()
     filename = f"{text}_{random.randint(1000,9999)}.png"
@@ -34,27 +52,37 @@ def ui_generate():
     solve_btn_state = gr.update(interactive=True, variant="primary")
     return img, text, filepath, solve_btn_state
 
-def ui_solve(path_hint: str):
+def ui_solve(path_hint: str, ground_truth: str):
     if path_hint and os.path.exists(path_hint):
         tensor = inf.preprocess_image(path_hint, (cfg.W_max, cfg.H))
         pred = inf.predict_captcha(MODEL, tensor, DEVICE)
-        return pred
-    return "No image generated yet. Click Generate CAPTCHA first."
+        
+        # Calculate accuracy
+        accuracy = calculate_accuracy(pred, ground_truth)
+        
+        return accuracy, pred
+    return "0%", "No image generated yet. Click Generate CAPTCHA first."
 
 with gr.Blocks(title="CAPTCHA OCR (checkpoint)") as demo:
     gr.Markdown("## CAPTCHA OCR demo")
 
     with gr.Row():
-        gen_btn = gr.Button("Generate CAPTCHA", variant="primary")
+        # Left column: Generate button + Solve button stacked vertically
+        with gr.Column(scale=1):
+            gen_btn = gr.Button("Generate CAPTCHA", variant="primary")
+            solve_btn = gr.Button("Solve", interactive=False, variant="secondary")
+        
+        # Right column: Ground Truth
         gt_out = gr.Textbox(label="Ground Truth", interactive=False)
 
     with gr.Row():
         img_out = gr.Image(label="Generated CAPTCHA", type="pil")
         path_box = gr.Textbox(label="Internal Path", interactive=False, visible=False)
 
-    # Solve button is now directly below Generate. Starts disabled/gray.
-    solve_btn = gr.Button("Solve", interactive=False, variant="secondary")
-    pred_out = gr.Textbox(label="Prediction", interactive=False)
+    # Prediction row split into two columns
+    with gr.Row():
+        accuracy_out = gr.Textbox(label="Character Accuracy", interactive=False)
+        pred_out = gr.Textbox(label="Prediction", interactive=False)
 
     # Generate: outputs image, ground truth, path, and enables Solve (green)
     gen_btn.click(
@@ -65,8 +93,8 @@ with gr.Blocks(title="CAPTCHA OCR (checkpoint)") as demo:
     # Solve: only uses the internal path (no upload option anymore)
     solve_btn.click(
         fn=ui_solve,
-        inputs=[path_box],
-        outputs=[pred_out],
+        inputs=[path_box, gt_out],
+        outputs=[accuracy_out, pred_out],
     )
 
 if __name__ == "__main__":
