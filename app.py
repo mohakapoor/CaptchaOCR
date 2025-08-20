@@ -76,9 +76,7 @@ with gr.Blocks(title="CAPTCHA OCR (checkpoint)") as demo:
         gt_out = gr.Textbox(label="Ground Truth", interactive=False, text_align="center")
 
     with gr.Row():
-        # Fixed height container for the CAPTCHA image
-        with gr.Box(style={"height": "200px"}):
-            img_out = gr.Image(label="Generated CAPTCHA", type="pil")
+        img_out = gr.Image(label="Generated CAPTCHA", type="pil")
         path_box = gr.Textbox(label="Internal Path", interactive=False, visible=False)
 
     # Prediction row split into two columns
