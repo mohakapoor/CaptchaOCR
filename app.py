@@ -29,23 +29,17 @@ def ui_generate():
     # Save to results directory
     filepath = os.path.join(cfg.RESULT_DIR, filename)
     img.save(filepath)
-    
-    return img, text, filepath
 
-def ui_solve(img: Image.Image, path_hint: str):
-    # Prefer uploaded image
-    if img is not None:
-        tmp_path = os.path.join(cfg.RESULT_DIR, f"upload_{random.randint(1000,9999)}.png")
-        img.save(tmp_path)
-        tensor = inf.preprocess_image(tmp_path, (cfg.W_max, cfg.H))
-        pred = inf.predict_captcha(MODEL, tensor, DEVICE)
-        return pred
-    # Otherwise, solve the last generated image
+    # Enable and turn Solve green now that an image exists
+    solve_btn_state = gr.update(interactive=True, variant="primary")
+    return img, text, filepath, solve_btn_state
+
+def ui_solve(path_hint: str):
     if path_hint and os.path.exists(path_hint):
         tensor = inf.preprocess_image(path_hint, (cfg.W_max, cfg.H))
         pred = inf.predict_captcha(MODEL, tensor, DEVICE)
         return pred
-    return "No image provided. Generate or upload first."
+    return "No image generated yet. Click Generate CAPTCHA first."
 
 with gr.Blocks(title="CAPTCHA OCR (checkpoint)") as demo:
     gr.Markdown("## CAPTCHA OCR demo")
@@ -58,15 +52,22 @@ with gr.Blocks(title="CAPTCHA OCR (checkpoint)") as demo:
         img_out = gr.Image(label="Generated CAPTCHA", type="pil")
         path_box = gr.Textbox(label="Internal Path", interactive=False, visible=False)
 
-    gen_btn.click(fn=ui_generate, outputs=[img_out, gt_out, path_box])
+    # Solve button is now directly below Generate. Starts disabled/gray.
+    solve_btn = gr.Button("Solve", interactive=False, variant="secondary")
+    pred_out = gr.Textbox(label="Prediction", interactive=False)
 
-    gr.Markdown("### Solve")
-    with gr.Row():
-        img_in = gr.Image(label="Upload CAPTCHA (optional)", type="pil")
-        solve_btn = gr.Button("Solve")
-        pred_out = gr.Textbox(label="Prediction", interactive=False)
+    # Generate: outputs image, ground truth, path, and enables Solve (green)
+    gen_btn.click(
+        fn=ui_generate,
+        outputs=[img_out, gt_out, path_box, solve_btn],
+    )
 
-    solve_btn.click(fn=ui_solve, inputs=[img_in, path_box], outputs=[pred_out])
+    # Solve: only uses the internal path (no upload option anymore)
+    solve_btn.click(
+        fn=ui_solve,
+        inputs=[path_box],
+        outputs=[pred_out],
+    )
 
 if __name__ == "__main__":
     demo.launch()
