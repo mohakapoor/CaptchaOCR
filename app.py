@@ -64,7 +64,7 @@ def ui_solve(path_hint: str, ground_truth: str):
     return "0%", "No image generated yet. Click Generate CAPTCHA first."
 
 with gr.Blocks(title="CAPTCHA OCR (checkpoint)") as demo:
-    gr.Markdown("## CAPTCHA OCR demo")
+    gr.Markdown("## CAPTCHA OCR ")
 
     with gr.Row():
         # Left column: Generate button + Solve button stacked vertically
@@ -73,16 +73,18 @@ with gr.Blocks(title="CAPTCHA OCR (checkpoint)") as demo:
             solve_btn = gr.Button("Solve", interactive=False, variant="secondary")
         
         # Right column: Ground Truth
-        gt_out = gr.Textbox(label="Ground Truth", interactive=False)
+        gt_out = gr.Textbox(label="Ground Truth", interactive=False, text_align="center")
 
     with gr.Row():
-        img_out = gr.Image(label="Generated CAPTCHA", type="pil")
+        # Fixed height container for the CAPTCHA image
+        with gr.Box(style={"height": "200px"}):
+            img_out = gr.Image(label="Generated CAPTCHA", type="pil")
         path_box = gr.Textbox(label="Internal Path", interactive=False, visible=False)
 
     # Prediction row split into two columns
     with gr.Row():
-        accuracy_out = gr.Textbox(label="Character Accuracy", interactive=False)
-        pred_out = gr.Textbox(label="Prediction", interactive=False)
+        accuracy_out = gr.Textbox(label="Character Accuracy", interactive=False, text_align="center")
+        pred_out = gr.Textbox(label="Prediction", interactive=False, text_align="center")
 
     # Generate: outputs image, ground truth, path, and enables Solve (green)
     gen_btn.click(
