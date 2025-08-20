@@ -1,3 +1,14 @@
+---
+title: CaptchaOCR
+emoji: 🔍
+colorFrom: green
+colorTo: gray
+sdk: gradio
+sdk_version: 5.43.1
+app_file: app.py
+pinned: false
+short_description: CAPTCHA text recognition using CRNN neural networks
+---
 # CAPTCHA OCR Project
 
 A PyTorch-based CAPTCHA recognition system using synthetic data generation and CTC-based sequence modeling.
