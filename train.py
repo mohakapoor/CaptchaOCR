@@ -50,7 +50,7 @@ def main():
     scaler = torch.amp.GradScaler('cuda', enabled=False)  # Disable AMP for stability
 
     # Epoch-based training with scheduler
-    epochs = 20  # Increased for OneCycleLR
+    epochs = 40  # Increased for OneCycleLR
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=3e-4, steps_per_epoch=len(train_dl), epochs=epochs
     )

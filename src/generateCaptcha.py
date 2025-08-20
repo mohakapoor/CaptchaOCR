@@ -1,30 +1,29 @@
-from captcha.image import ImageCaptcha
-import random, string, os, csv, io
-import pandas as pd
+"""
+Simple CAPTCHA Generation Utility
+Generates individual CAPTCHA images using enhanced rendering
+"""
+
+import random
+import string
 from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
 import cv2
+import io
 
-# ===== your original config =====
-DATASET_DIR = "Dataset/captchas"
-LABELS = "Dataset/labels.csv"
-NUM_IMAGES = 100000
+# Configuration - match your training setup
+IMG_WIDTH = 256
+IMG_HEIGHT = 60
+GRAYSCALE = True
 CHARS = string.ascii_letters + string.digits
 CAPTCHA_LEN_LOWER_LIMIT = 5
 CAPTCHA_LEN_UPPER_LIMIT = 7
-directories = [["train",0.8],["val",0.1],["test",0.1]]
 
-# Match config.py dimensions
-IMG_WIDTH = 256   # W_max from config
-IMG_HEIGHT = 60   # H from config
-GRAYSCALE = True  # grayscale from config
-
-
-# ----- minimal augment helpers -----
 def rand_color(lo=0, hi=255):
+    """Generate random RGB color."""
     return tuple(random.randint(lo, hi) for _ in range(3))
 
 def gradient_bg(w, h):
+    """Create gradient background."""
     top = rand_color(200, 255)
     bot = rand_color(200, 255)
     arr = np.zeros((h, w, 3), dtype=np.uint8)
@@ -34,6 +33,7 @@ def gradient_bg(w, h):
     return Image.fromarray(arr)
 
 def add_interference(img, line_range=(0, 3), dot_range=(10, 80)):
+    """Add interference patterns (lines and dots)."""
     draw = ImageDraw.Draw(img)
     w, h = img.size
     for _ in range(random.randint(*line_range)):
@@ -47,6 +47,7 @@ def add_interference(img, line_range=(0, 3), dot_range=(10, 80)):
     return img
 
 def perspective_warp(img, max_ratio=0.03):
+    """Apply perspective warping."""
     if max_ratio <= 0:
         return img
     w, h = img.size
@@ -63,6 +64,7 @@ def perspective_warp(img, max_ratio=0.03):
     return Image.fromarray(out[:, :, ::-1])  # back to RGB
 
 def jpeg_recompress(img, qmin=70, qmax=95):
+    """Recompress image to simulate JPEG artifacts."""
     q = random.randint(qmin, qmax)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=q)
@@ -70,16 +72,18 @@ def jpeg_recompress(img, qmin=70, qmax=95):
     return Image.open(buf).convert("RGB")
 
 def add_noise_and_blur(img, noise_sigma=(0.0, 6.0), blur_sigma=(0.0, 0.8), motion_prob=0.1):
-    # gaussian noise
+    """Add noise and blur effects."""
+    # Gaussian noise
     s = random.uniform(*noise_sigma)
     if s > 0.05:
         arr = np.array(img).astype(np.float32)
         arr += np.random.normal(0, s, arr.shape).astype(np.float32)
         arr = np.clip(arr, 0, 255).astype(np.uint8)
         img = Image.fromarray(arr)
-    # blur
+    
+    # Blur
     if random.random() < motion_prob:
-        # simple directional blur
+        # Simple directional blur
         ksize = random.choice([3,5])
         kernel = Image.new("L", (ksize, ksize), 0)
         draw = ImageDraw.Draw(kernel)
@@ -87,7 +91,6 @@ def add_noise_and_blur(img, noise_sigma=(0.0, 6.0), blur_sigma=(0.0, 0.8), motio
         kernel = kernel.rotate(random.uniform(0, 180), resample=Image.BILINEAR)
         kernel = np.array(kernel, dtype=np.float32)
         kernel /= max(1, kernel.sum())
-        import cv2
         arr = np.array(img)
         arr = cv2.filter2D(arr, -1, kernel)
         img = Image.fromarray(arr)
@@ -95,12 +98,30 @@ def add_noise_and_blur(img, noise_sigma=(0.0, 6.0), blur_sigma=(0.0, 0.8), motio
         sigma = random.uniform(*blur_sigma)
         if sigma > 0.05:
             img = img.filter(ImageFilter.GaussianBlur(radius=sigma))
+    
     return img
 
-def render_with_variation(text, width=IMG_WIDTH, height=IMG_HEIGHT):
-    # randomize basic style knobs
+def generate_captcha(text=None, width=IMG_WIDTH, height=IMG_HEIGHT, save_path=None):
+    """
+    Generate a single enhanced CAPTCHA image.
+    
+    Args:
+        text (str, optional): Text to render. If None, generates random text.
+        width (int): Image width
+        height (int): Image height
+        save_path (str, optional): Path to save the image. If None, returns PIL Image.
+    
+    Returns:
+        PIL Image if save_path is None, otherwise saves and returns the path
+    """
+    # Generate random text if none provided
+    if text is None:
+        text = ''.join(random.choices(CHARS, k=random.randint(CAPTCHA_LEN_LOWER_LIMIT, CAPTCHA_LEN_UPPER_LIMIT)))
+    
+    # Randomize basic style
     bg_choice = random.choice(["solid", "gradient"])
     fg_color = rand_color(0, 80)
+    
     if bg_choice == "solid":
         bg_color = rand_color(210, 255)
         bg = Image.new("RGB", (width, height), color=bg_color)
@@ -111,30 +132,29 @@ def render_with_variation(text, width=IMG_WIDTH, height=IMG_HEIGHT):
     font_sizes = [int(height * 0.7), int(height * 0.75), int(height * 0.8), int(height * 0.85)]
     font_size = random.choice(font_sizes)
     
-    # ImageCaptcha accepts fonts via fonts arg; here we keep default but jitter spacing
+    # Use ImageCaptcha for base text rendering
+    from captcha.image import ImageCaptcha
     image = ImageCaptcha(width=width, height=height, fonts=None, font_sizes=[font_size])
-
-    # draw base image
+    
+    # Draw base image
     base = Image.frombytes('RGB', (width, height), image.generate_image(text).tobytes())
 
-    # quick contrast tweak: recolor foreground by compositing text mask if needed
-    # For minimal change, we stick with base and apply light warps/noise
-    # mild rotation/shear
+    # Apply enhancements
     angle = random.uniform(-6, 6)
     base = base.rotate(angle, resample=Image.BILINEAR, expand=False, fillcolor=bg.getpixel((0,0)))
 
-    # perspective warp (very light)
+    # Perspective warp (very light)
     if random.random() < 0.6:
         base = perspective_warp(base, max_ratio=0.025)
 
-    # draw interference over the image
+    # Add interference
     base = add_interference(base, line_range=(0, 3), dot_range=(10, 60))
 
-    # light noise + blur + jpeg recompress to add artifacts
+    # Noise + blur + JPEG recompression
     base = add_noise_and_blur(base, noise_sigma=(0.0, 5.0), blur_sigma=(0.0, 0.7), motion_prob=0.12)
     base = jpeg_recompress(base, qmin=72, qmax=92)
 
-    # optional low contrast: 20% chance to darken bg and lighten fg a bit
+    # Optional low contrast
     if random.random() < 0.2:
         base = base.point(lambda p: int(p*0.95 + 6))
 
@@ -142,71 +162,20 @@ def render_with_variation(text, width=IMG_WIDTH, height=IMG_HEIGHT):
     if GRAYSCALE:
         base = base.convert('L')
     
-    return base
+    # Save or return
+    if save_path:
+        base.save(save_path)
+        return save_path
+    else:
+        return base
 
 
-
-# Fix: Extract names and thresholds upfront
-train_name, val_name, test_name = directories[0][0], directories[1][0], directories[2][0]
-train_ratio, val_ratio, test_ratio = directories[0][1], directories[1][1], directories[2][1]
-
-# Calculate split thresholds
-n = NUM_IMAGES
-train_end = int(n * train_ratio)
-val_end = train_end + int(n * val_ratio)
-
-# Create directories once
-train_dir = os.path.join(DATASET_DIR, train_name)
-val_dir = os.path.join(DATASET_DIR, val_name)
-test_dir = os.path.join(DATASET_DIR, test_name)
-
-os.makedirs(DATASET_DIR, exist_ok=True)
-os.makedirs(train_dir, exist_ok=True)
-os.makedirs(val_dir, exist_ok=True)
-os.makedirs(test_dir, exist_ok=True)
-
-image = ImageCaptcha(width=160, height=60)  # kept for compatibility if needed
-
-with open(LABELS, mode="w", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerow(["filename","label"])
+if __name__ == "__main__":
+    # Example usage
+    print("Generating sample CAPTCHAs...")
     
-    for i in range(NUM_IMAGES):
-        if i % max(1, (NUM_IMAGES//100)) == 0:
-            print(f"{i} images made")
-        
-        # Pick output directory based on thresholds
-        if i < train_end:
-            OUTPUT_DIR = train_dir
-        elif i < val_end:
-            OUTPUT_DIR = val_dir
-        else:
-            OUTPUT_DIR = test_dir
-
-        text = ''.join(random.choices(CHARS, k=random.randint(CAPTCHA_LEN_LOWER_LIMIT, CAPTCHA_LEN_UPPER_LIMIT)))
-        filename = f"{text}_{i}.png"
-        filepath = os.path.join(OUTPUT_DIR, filename)
-
-        # --- minimal change: replace image.write with our small variation renderer ---
-        img = render_with_variation(text, width=IMG_WIDTH, height=IMG_HEIGHT)
-        img.save(filepath)
-        # -----------------------------------------
-
-        writer.writerow([filename, text])
-
-print("Data Generated!")
-
-# Fixed split logic
-df = pd.read_csv(LABELS)
-n = len(df)
-train_end = int(n * train_ratio)
-val_end = train_end + int(n * val_ratio)
-
-df_train = df.iloc[:train_end]
-df_val = df.iloc[train_end:val_end]
-df_test = df.iloc[val_end:]
-
-df_train.to_csv(os.path.join(DATASET_DIR, f"{train_name}/labels.csv"), index=False)
-df_val.to_csv(os.path.join(DATASET_DIR, f"{val_name}/labels.csv"), index=False)
-df_test.to_csv(os.path.join(DATASET_DIR, f"{test_name}/labels.csv"), index=False)
-print("Labels Generated")
+    # Generate with specific text
+    img1 = generate_captcha("HELLO", save_path="sample_HELLO.png")
+    print(f"Generated: sample_HELLO.png")
+    
+    print("Done! Check the generated images.")

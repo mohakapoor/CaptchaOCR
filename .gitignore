@@ -80,14 +80,13 @@ desktop.ini
 !Metrics/*.jpg
 
 # Models and checkpoints
-checkpoints/
-*.ckpt
-*.onnx
-*.tflite
-*.pth
-*.pt
-*.bin
-*.safetensors
+checkpoints/*.pth
+checkpoints/*.pt
+checkpoints/*.ckpt
+checkpoints/*.onnx
+checkpoints/*.bin
+checkpoints/*.safetensors
+!checkpoints/best_model.pth
 runs/
 outputs/
 artifacts/

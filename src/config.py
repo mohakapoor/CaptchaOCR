@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    data_root: str = os.getenv("DATA_ROOT","Dataset_test\captchas")
+    data_root: str = os.getenv("DATA_ROOT","Dataset\captchas")
 
     chars: str = string.ascii_letters + string.digits
     CAPTCHA_LEN_LOWER_LIMIT: int = 5

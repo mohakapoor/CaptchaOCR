@@ -7,7 +7,7 @@ from src.config import cfg
 from src.model_crnn import CRNN
 from src.vocab import ctc_greedy_decode, vocab_size
 from src.plotting import TrainingMetrics
-from captcha.image import ImageCaptcha
+from src.generateCaptcha import generate_captcha
 
 def load_model(checkpoint_path="checkpoints/best_model.pth"):
     """Load the trained model from checkpoint."""
@@ -69,12 +69,17 @@ def predict_captcha(model, image_tensor, device):
         
         return prediction[0] if prediction else ""
 
-def generate_test_captcha(text, filename, width=160, height=60):
-    """Generate a test CAPTCHA image."""
-    image = ImageCaptcha(width=width, height=height)
+def generate_test_captcha(text, filename, width=256, height=60):
+    """Generate a test CAPTCHA image using enhanced generation."""
+    # Use the enhanced CAPTCHA generation from generateCaptcha.py
+    img = generate_captcha(text, width=width, height=height)
+    
+    # Ensure results directory exists
+    os.makedirs(cfg.RESULT_DIR, exist_ok=True)
+    
     filepath = os.path.join(cfg.RESULT_DIR, filename)
-    image.write(text, filepath)
-    print(f"Generated test CAPTCHA: {filename}")
+    img.save(filepath)
+    print(f"Generated enhanced test CAPTCHA: {filename}")
     return filepath
 
 def main():
@@ -92,7 +97,7 @@ def main():
         print("Model loaded successfully!")
         
         # Generate test CAPTCHAs
-        print("\nGenerating test CAPTCHAs...")
+        print("\nGenerating enhanced test CAPTCHAs...")
         test_cases = []
         
         for i in range(4):
@@ -100,8 +105,8 @@ def main():
             text = ''.join(random.choices(cfg.chars, k=random.randint(cfg.CAPTCHA_LEN_LOWER_LIMIT, cfg.CAPTCHA_LEN_UPPER_LIMIT)))
             filename = f"{text}_{i}.png"
             
-            # Generate image
-            image_path = generate_test_captcha(text, filename)
+            # Generate enhanced image
+            image_path = generate_test_captcha(text, filename, width=cfg.W_max, height=cfg.H)
             test_cases.append((text, image_path, ""))  # Add empty prediction slot
         
         # Run inference
@@ -151,7 +156,7 @@ def main():
                     correct_chars += 1
         
         char_accuracy = (correct_chars / total_chars) * 100 if total_chars > 0 else 0
-        print(f"🔤 Character Accuracy: {correct_chars}/{total_chars} ({char_accuracy:.1f}%)")
+        print(f"Character Accuracy: {correct_chars}/{total_chars} ({char_accuracy:.1f}%)")
         
         if accuracy >= 80:
             print("Excellent performance!")
