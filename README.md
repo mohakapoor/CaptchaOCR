@@ -256,9 +256,7 @@ This is a learning project! Feel free to:
 
 - [CTC Paper](https://www.cs.toronto.edu/~graves/icml_2006.pdf)
 - [CRNN Architecture](https://arxiv.org/abs/1507.05717)
-- [PyTorch CTC Tutorial](https://pytorch.org/docs/stable/generated/torch.nn.CTCLoss.html)
 
-## 📝 License
 
 This project is for educational purposes. Feel free to use and modify as needed.
 
