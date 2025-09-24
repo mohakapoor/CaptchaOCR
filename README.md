@@ -9,6 +9,8 @@ app_file: app.py
 pinned: false
 short_description: CAPTCHA text recognition using CRNN neural networks
 ---
+A PyTorch-based CAPTCHA recognition system using synthetic data generation and CTC-based sequence modeling. Built with deep learning techniques, achieving high accuracy on complex text recognition tasks.
+
 # CAPTCHA OCR Project
 
 A PyTorch-based CAPTCHA recognition system using synthetic data generation and CTC-based sequence modeling.
